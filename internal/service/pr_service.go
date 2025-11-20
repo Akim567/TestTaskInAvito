@@ -34,3 +34,24 @@ func NewPRService(
 		tx:    tx,
 	}
 }
+
+// ===== реализация интерфейса =====
+
+func (s *prService) CreatePR(ctx context.Context, pr domain.PullRequest) (*domain.PullRequest, error) {
+	// TODO: реализовать:
+	// - проверить, что PR ещё нет
+	// - найти автора, его команду
+	// - выбрать случайных ревьюверов
+	// - сохранить PR и ревьюверов
+	panic("not implemented")
+}
+
+func (s *prService) MergePR(ctx context.Context, prID string) (*domain.PullRequest, error) {
+	// TODO: реализовать идемпотентный merge
+	panic("not implemented")
+}
+
+func (s *prService) ReassignReviewer(ctx context.Context, prID, oldReviewerID string) (*domain.PullRequest, string, error) {
+	// TODO: реализовать правила переназначения
+	panic("not implemented")
+}

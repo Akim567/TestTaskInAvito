@@ -30,3 +30,15 @@ func NewUserService(
 		tx:    tx,
 	}
 }
+
+// ===== реализация интерфейса =====
+
+func (s *userService) SetIsActive(ctx context.Context, userID string, isActive bool) (*domain.User, error) {
+	// TODO: реализовать логику (через s.tx, s.users)
+	panic("not implemented")
+}
+
+func (s *userService) GetUserReviews(ctx context.Context, userID string) ([]domain.PullRequest, error) {
+	// TODO: реализовать логику (через s.tx, s.pr)
+	panic("not implemented")
+}

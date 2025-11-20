@@ -26,3 +26,18 @@ func NewTeamService(teams repo.TeamRepository, users repo.UserRepository, tx TxM
 		tx:    tx,
 	}
 }
+
+// ===== реализация интерфейса =====
+
+func (s *teamService) CreateTeam(ctx context.Context, team domain.Team) (*domain.Team, error) {
+	// TODO: реализовать:
+	// - проверить, что команды ещё нет
+	// - создать команду
+	// - создать/обновить пользователей
+	panic("not implemented")
+}
+
+func (s *teamService) GetTeam(ctx context.Context, name string) (*domain.Team, error) {
+	// TODO: реализовать через repo.TeamRepository
+	panic("not implemented")
+}
