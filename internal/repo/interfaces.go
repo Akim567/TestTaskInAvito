@@ -14,6 +14,7 @@ type UserRepository interface {
 	SetIsActive(ctx context.Context, userID string, isActive bool) error
 	GetByID(ctx context.Context, id string) (*domain.User, error)
 	GetActiveTeamMembers(ctx context.Context, teamName string) ([]domain.User, error)
+	CreateOrUpdate(ctx context.Context, user domain.User) error
 }
 
 type PRRepository interface {
