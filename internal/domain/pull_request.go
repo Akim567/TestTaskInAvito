@@ -10,11 +10,11 @@ const (
 )
 
 type PullRequest struct {
-	ID                string
-	Name              string
-	Author            string
-	Status            PRStatus
-	AssignedReviewers []string // <= 2
-	CreatedAt         time.Time
-	MergedAt          *time.Time
+	ID                string     `db:"id"`
+	Name              string     `db:"name"`
+	Author            string     `db:"author_id"` // user_id автора
+	Status            PRStatus   `db:"status"`
+	AssignedReviewers []string   `db:"-"` // это отдельная таблица
+	CreatedAt         time.Time  `db:"created_at"`
+	MergedAt          *time.Time `db:"merged_at"`
 }

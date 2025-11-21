@@ -35,7 +35,6 @@ func (s *teamService) CreateTeam(ctx context.Context, team domain.Team) (*domain
 	var createdTeam *domain.Team
 
 	err := s.tx.Do(ctx, func(txCtx context.Context) error {
-		// Проверяем, что команды ещё нет
 		existingTeam, err := s.teams.GetByName(txCtx, team.Name)
 		if err == nil && existingTeam != nil {
 			return domain.NewTeamExistsError(team.Name)
