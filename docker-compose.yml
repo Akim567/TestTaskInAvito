@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: avito-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: avito
+    ports:
+      - "5432:5432"
+    volumes:
+      - avito-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d avito"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    image: migrate/migrate
+    container_name: avito-migrate
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations
+    command:
+      [
+        "-path", "/migrations",
+        "-database", "postgres://postgres:postgres@db:5432/avito?sslmode=disable",
+        "up"
+      ]
+    restart: "on-failure"
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: avito-app
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      HTTP_PORT: "8080"
+      DB_DSN: "postgres://postgres:postgres@db:5432/avito?sslmode=disable"
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  avito-db-data:
