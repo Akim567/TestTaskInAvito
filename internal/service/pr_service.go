@@ -109,13 +109,134 @@ func (s *prService) CreatePR(ctx context.Context, in domain.PullRequest) (*domai
 }
 
 func (s *prService) MergePR(ctx context.Context, prID string) (*domain.PullRequest, error) {
-	// TODO: реализовать идемпотентный merge
-	panic("not implemented")
+	var merged *domain.PullRequest
+
+	err := s.tx.Do(ctx, func(txCtx context.Context) error {
+		// 1. достаём PR
+		pr, err := s.pr.GetByID(txCtx, prID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return domain.NewNotFoundError("pull_request")
+			}
+			return err
+		}
+
+		// 2. если уже MERGED — просто возвращаем как есть (идемпотентность)
+		if pr.Status == domain.PRStatusMerged {
+			merged = pr
+			return nil
+		}
+
+		// 3. помечаем как MERGED и проставляем mergedAt
+		now := time.Now().UTC()
+		pr.Status = domain.PRStatusMerged
+		pr.MergedAt = &now
+
+		if err := s.pr.Update(txCtx, *pr); err != nil {
+			return err
+		}
+
+		merged = pr
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return merged, nil
 }
 
 func (s *prService) ReassignReviewer(ctx context.Context, prID, oldReviewerID string) (*domain.PullRequest, string, error) {
-	// TODO: реализовать правила переназначения
-	panic("not implemented")
+	var updated *domain.PullRequest
+	var replacedBy string
+
+	err := s.tx.Do(ctx, func(txCtx context.Context) error {
+		// 1. достаём PR
+		pr, err := s.pr.GetByID(txCtx, prID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return domain.NewNotFoundError("pull_request")
+			}
+			return err
+		}
+
+		// 2. нельзя менять ревьюверов после MERGED
+		if pr.Status == domain.PRStatusMerged {
+			return domain.NewPRMergedError(prID)
+		}
+
+		// 3. проверяем, что старый ревьювер вообще назначен
+		idx := -1
+		for i, rid := range pr.AssignedReviewers {
+			if rid == oldReviewerID {
+				idx = i
+				break
+			}
+		}
+		if idx == -1 {
+			return domain.NewNotAssignedError(oldReviewerID, prID)
+		}
+
+		// 4. убеждаемся, что такой пользователь существует
+		oldReviewer, err := s.users.GetByID(txCtx, oldReviewerID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return domain.NewNotFoundError("user")
+			}
+			return err
+		}
+
+		// 5. берём активных участников команды старого ревьювера
+		candidates, err := s.users.GetActiveTeamMembers(txCtx, oldReviewer.TeamName)
+		if err != nil {
+			return err
+		}
+
+		// 6. фильтруем: убираем самого старого ревьювера и уже назначенных ревьюверов,
+		// чтобы не дублировать одного и того же человека
+		current := make(map[string]struct{}, len(pr.AssignedReviewers))
+		for _, rid := range pr.AssignedReviewers {
+			current[rid] = struct{}{}
+		}
+
+		filtered := make([]domain.User, 0, len(candidates))
+		for _, u := range candidates {
+			if u.ID == oldReviewerID {
+				continue
+			}
+			// не назначаем второго такого же ревьювера
+			if _, exists := current[u.ID]; exists {
+				continue
+			}
+			filtered = append(filtered, u)
+		}
+
+		if len(filtered) == 0 {
+			return domain.NewNoCandidateError(oldReviewer.TeamName)
+		}
+
+		// 7. выбираем одного случайного кандидата
+		newReviewerID := pickRandomReviewers(filtered, 1)[0]
+
+		// 8. заменяем в списке ревьюверов
+		pr.AssignedReviewers[idx] = newReviewerID
+
+		// 9. сохраняем изменения
+		if err := s.pr.Update(txCtx, *pr); err != nil {
+			return err
+		}
+
+		updated = pr
+		replacedBy = newReviewerID
+		return nil
+	})
+
+	if err != nil {
+		return nil, "", err
+	}
+
+	return updated, replacedBy, nil
 }
 
 // ===== хелперы =====
