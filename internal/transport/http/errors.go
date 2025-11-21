@@ -1,21 +1,22 @@
 package http
 
 import (
-	"TestTaskInAvito/internal/domain"
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"net/http"
+
+	"TestTaskInAvito/internal/domain"
+	stdhttp "net/http"
 )
 
-func writeJSON(w http.ResponseWriter, status int, v any) {
+func writeJSON(w stdhttp.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(v)
 }
 
-func writeError(w http.ResponseWriter, err error) {
-	// если это доменная ошибка — маппим код и http-статус
+func writeError(w stdhttp.ResponseWriter, err error) {
+	// доменная ошибка
 	var dErr *domain.DomainError
 	if errors.As(err, &dErr) {
 		status := httpStatusByCode(dErr.Code)
@@ -37,33 +38,33 @@ func writeError(w http.ResponseWriter, err error) {
 				Message: "resource not found",
 			},
 		}
-		writeJSON(w, http.StatusNotFound, resp)
+		writeJSON(w, stdhttp.StatusNotFound, resp)
 		return
 	}
 
-	// все остальные — 500
+	// всё остальное → 500
 	resp := ErrorResponseDTO{
 		Error: ErrorBodyDTO{
 			Code:    "INTERNAL",
 			Message: "internal server error",
 		},
 	}
-	writeJSON(w, http.StatusInternalServerError, resp)
+	writeJSON(w, stdhttp.StatusInternalServerError, resp)
 }
 
 func httpStatusByCode(code domain.ErrorCode) int {
 	switch code {
 	case domain.ErrorCodeTeamExists:
-		return http.StatusBadRequest // 400
+		return stdhttp.StatusBadRequest
 	case domain.ErrorCodePRExists:
-		return http.StatusConflict // 409
+		return stdhttp.StatusConflict
 	case domain.ErrorCodePRMerged,
 		domain.ErrorCodeNotAssigned,
 		domain.ErrorCodeNoCandidate:
-		return http.StatusConflict // 409
+		return stdhttp.StatusConflict
 	case domain.ErrorCodeNotFound:
-		return http.StatusNotFound // 404
+		return stdhttp.StatusNotFound
 	default:
-		return http.StatusInternalServerError
+		return stdhttp.StatusInternalServerError
 	}
 }

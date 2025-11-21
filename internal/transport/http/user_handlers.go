@@ -2,9 +2,9 @@ package http
 
 import (
 	"encoding/json"
-	stdhttp "net/http"
 
 	"TestTaskInAvito/internal/service"
+	stdhttp "net/http"
 )
 
 type UserHandler struct {
@@ -29,13 +29,7 @@ func (h *UserHandler) SetIsActive(w stdhttp.ResponseWriter, r *stdhttp.Request) 
 		return
 	}
 
-	resp := UserDTO{
-		UserID:   updated.ID,
-		Username: updated.Username,
-		TeamName: updated.TeamName,
-		IsActive: updated.IsActive,
-	}
-
+	resp := userToDTO(*updated)
 	writeJSON(w, stdhttp.StatusOK, resp)
 }
 
@@ -43,7 +37,13 @@ func (h *UserHandler) SetIsActive(w stdhttp.ResponseWriter, r *stdhttp.Request) 
 func (h *UserHandler) GetReview(w stdhttp.ResponseWriter, r *stdhttp.Request) {
 	userID := r.URL.Query().Get("user_id")
 	if userID == "" {
-		writeError(w, stdhttp.ErrNotSupported) // лёгкий вариант -> можно сделать "BAD_REQUEST"
+		// Явный 400, чтобы не городить странные ошибки
+		writeJSON(w, stdhttp.StatusBadRequest, ErrorResponseDTO{
+			Error: ErrorBodyDTO{
+				Code:    "BAD_REQUEST",
+				Message: "user_id is required",
+			},
+		})
 		return
 	}
 

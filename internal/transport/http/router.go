@@ -1,9 +1,10 @@
 package http
 
 import (
-	"net/http"
-
 	"TestTaskInAvito/internal/service"
+
+	stdhttp "net/http"
+
 	"github.com/go-chi/chi/v5"
 )
 
@@ -11,7 +12,7 @@ func NewRouter(
 	teamSvc service.TeamService,
 	userSvc service.UserService,
 	prSvc service.PRService,
-) http.Handler {
+) stdhttp.Handler {
 	r := chi.NewRouter()
 
 	teamHandler := NewTeamHandler(teamSvc)
