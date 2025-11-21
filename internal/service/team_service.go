@@ -75,6 +75,13 @@ func (s *teamService) CreateTeam(ctx context.Context, team domain.Team) (*domain
 }
 
 func (s *teamService) GetTeam(ctx context.Context, name string) (*domain.Team, error) {
-	// TODO: реализовать через repo.TeamRepository
-	panic("not implemented")
+	team, err := s.teams.GetByName(ctx, name)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domain.NewNotFoundError("team")
+		}
+		return nil, err
+	}
+
+	return team, nil
 }
